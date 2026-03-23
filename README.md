@@ -9,9 +9,17 @@ The project follows a modular RAG flow:
 3. **AI Engine**: PDF text extraction and FAISS Vector Storage.
 4. **LLM**: Groq (Llama 3) for context-aware response generation.
 
-## 👥 Team Contributions
-- **AI/RAG Engineering**: Developed the PDF processing and FAISS indexing logic.
-- **Backend Development**: Created the FastAPI endpoints and integrated the LLM.
-- **Frontend Development**: Built the interactive Chat and Upload UI.
-- **Data Processing**: Managed text cleaning and document chunking.
-- **DevOps & Integration**: Managed GitHub version control and system-wide integration.
+## 🛠️ Technical Implementation (Solo Developer)
+
+I built this entire RAG (Retrieval-Augmented Generation) pipeline from scratch, handling the full development lifecycle:
+
+* **Frontend**: Developed a responsive chat and upload interface using **React.js**.
+* **Backend**: Built a high-performance API with **Python** and **FastAPI**.
+* **AI Engine**: Implemented document intelligence using **PyPDF2** for extraction.
+* **LLM Integration**: Connected the system to **Groq (Llama 3)** for ultra-fast, context-aware responses.
+* **DevOps**: Managed version control via **Git/GitHub** and optimized the environment with custom `.gitignore` configurations.
+
+## 🚀 Key Features
+- **Context-Aware Q&A**: Answers are strictly based on the uploaded SOP content.
+- **Fast Inference**: Leveraged Groq's API for near-instant response times.
+- **Dynamic Indexing**: Documents are processed and indexed in real-time upon upload.
