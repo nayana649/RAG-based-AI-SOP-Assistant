@@ -1,77 +1,86 @@
 import os
-import re
-from pypdf import PdfReader
+from langchain_community.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain_openai import OpenAIEmbeddings
+from langchain_groq import ChatGroq
+from langchain.chains import RetrievalQA
+from langchain.prompts import PromptTemplate
 
-def clean_text(text):
-    """Member 4 Task: Clean text for high-quality embeddings."""
-    text = re.sub(r'\s+', ' ', text)  
-    text = re.sub(r'[^\x00-\x7F]+', ' ', text) 
-    return text.strip()
+# 1. Configuration & API Key
+os.environ["GROQ_API_KEY"] = "YOUR_GROQ_API_KEY"
+os.environ["OPENAI_API_KEY"] = "YOUR_OPENAI_API_KEY"
 
-def get_relevant_chunk(question, text):
-    """Simulates the retrieval of relevant information[cite: 16]."""
-    sentences = text.split('. ')
-    keywords = question.lower().split()
-    for sentence in sentences:
-        if any(word in sentence.lower() for word in keywords):
-            return sentence
-    return sentences[0]
-
-def start_rag_pipeline():
-    # Identify the Downloads folder 
-    downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
+def process_pdf_with_citations(file_path):
+    # WEEK 1: Ingestion Pipeline (Enhanced with Metadata)
+    loader = PyPDFLoader(file_path)
+    documents = loader.load() # This automatically captures 'page' metadata
     
-    print("--- 📡 SOP ASSISTANT: MEMBER 4 PIPELINE ---")
+    # Sophisticated Chunking (Week 1 Requirement)
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000, 
+        chunk_overlap=100
+    )
+    texts = text_splitter.split_documents(documents)
     
-    # STEP 1: ASKS FOR PDF NAME [cite: 9]
-    pdf_input = input("\n📥 1. Enter the PDF name: ").strip()
+    # Embedding & Vector Store (FAISS)
+    embeddings = OpenAIEmbeddings()
+    vector_store = FAISS.from_documents(texts, embeddings)
     
-    if not pdf_input.lower().endswith(".pdf"):
-        pdf_input += ".pdf"
+    return vector_store
+
+def get_response(query, vector_store):
+    # WEEK 2 & 4: Safety Guardrails (Strict System Prompt)
+    template = """
+    You are the 'DocuMind Enterprise' Corporate Assistant. 
+    Use ONLY the following pieces of context to answer the question. 
     
-    file_path = os.path.join(downloads_path, pdf_input)
+    GUARDRAILS:
+    1. If the answer is not in the context, strictly say: "I don't know; this is outside my scope."
+    2. Do NOT use any external knowledge. 
+    3. Do NOT mention the context folders or technical details.
 
-    if not os.path.exists(file_path):
-        print(f"❌ Error: File '{pdf_input}' not found in Downloads.")
-        return
+    CONTEXT:
+    {context}
 
-    # STEP 2: THE "PAUSE" FOR YOUR QUESTION [cite: 9]
-    user_query = input("❓ 2. What specific info do you want to extract? ")
+    QUESTION: 
+    {question}
 
-    # --- NEW FEATURE: AUTO-OPEN PDF ---
-    print(f"\n📂 Opening {pdf_input} for visual verification...")
-    os.startfile(file_path) 
+    ANSWER:
+    """
+    
+    PROMPT = PromptTemplate(
+        template=template, 
+        input_variables=["context", "question"]
+    )
 
-    print(f"🔄 Now processing {pdf_input}...")
+    # Initialize LLM (Groq Llama 3)
+    llm = ChatGroq(model_name="llama3-8b-8192", temperature=0)
 
-    try:
-        # Task: PDF Extraction (Member 4 - Week 1) [cite: 23, 32]
-        reader = PdfReader(file_path)
-        raw_text = ""
-        for page in reader.pages:
-            raw_text += page.extract_text() + " "
-        
-        # Task: Text Cleaning (Member 4 - Week 2) [cite: 23, 32]
-        cleaned_text = clean_text(raw_text)
-        
-        # Task: Extracting context based on your question [cite: 4, 16]
-        extracted_content = get_relevant_chunk(user_query, cleaned_text)
+    # WEEK 4: Retrieval with Metadata (Citations)
+    # Search for top 3 relevant chunks
+    docs = vector_store.similarity_search(query, k=3)
+    
+    # Extract Page Numbers and Source Names for Citations
+    citations = []
+    for d in docs:
+        page_num = d.metadata.get('page', 0) + 1  # Index starts at 0, so add 1
+        source = f"Source: {os.path.basename(file_path)} (Page {page_num})"
+        if source not in citations:
+            citations.append(source)
 
-        # Goal 2: Convert to Embeddings [cite: 7, 15]
-        simulated_vector = [0.42, -0.15, 0.78, 0.33, -0.91]
+    # Create the Chain
+    chain = RetrievalQA.from_chain_type(
+        llm=llm,
+        chain_type="stuff",
+        retriever=vector_store.as_retriever(),
+        chain_type_kwargs={"prompt": PROMPT}
+    )
 
-        print("-" * 50)
-        print("📝 FINAL COMPILER OUTPUT")
-        print("-" * 50)
-        print(f"📄 DOCUMENT: {pdf_input}")
-        print(f"❓ QUESTION: {user_query}")
-        print(f"🔍 EXTRACTED DATA: {extracted_content[:250]}...")
-        print(f"🔢 EMBEDDING VECTOR: {simulated_vector}")
-        print("-" * 50)
-        print("✅ Status: Data is prepared for Member 1.")
-
-    except Exception as e:
-        print(f"❌ Error: {e}")
-
-if __name__ == "__main__":
-    start_rag_pipeline()
+    result = chain.invoke({"query": query})
+    
+    # Return both the Answer and the Citations
+    return {
+        "answer": result["result"],
+        "citations": citations
+    }

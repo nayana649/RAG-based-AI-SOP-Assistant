@@ -1,64 +1,91 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import './App.css';
 
 function App() {
+  const [query, setQuery] = useState('');
+  const [chatHistory, setChatHistory] = useState([]);
   const [file, setFile] = useState(null);
-  const [question, setQuestion] = useState("");
-  const [chat, setChat] = useState([]);
-  const [status, setStatus] = useState("Idle");
+  const [loading, setLoading] = useState(false);
 
   const handleUpload = async () => {
-    if (!file) return alert("Select a file first!");
+    if (!file) return alert("Please select a PDF first!");
     const formData = new FormData();
-    formData.append("file", file);
-    setStatus("Indexing...");
+    formData.append('file', file);
+
+    setLoading(true);
     try {
-      await axios.post("http://localhost:8000/upload", formData);
-      setStatus("Document Ready!");
-    } catch (err) { setStatus("Upload Error."); }
+      await fetch('http://localhost:8000/upload', { method: 'POST', body: formData });
+      alert("SOP Document Uploaded and Indexed!");
+    } catch (err) {
+      alert("Upload failed.");
+    }
+    setLoading(false);
   };
 
-  const handleAsk = async () => {
-    if (!question) return;
-    const newChat = [...chat, { role: "user", text: question }];
-    setChat(newChat);
-    setStatus("AI is thinking...");
+  const handleChat = async () => {
+    if (!query) return;
+    setLoading(true);
+    
     try {
-      const response = await axios.post("http://localhost:8000/ask", { question });
-      setChat([...newChat, { role: "ai", text: response.data.answer }]);
-      setQuestion("");
-      setStatus("Document Ready!");
-    } catch (err) { setStatus("Error getting answer."); }
-  };
+      const response = await fetch('http://localhost:8000/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+      const data = await response.json();
 
-  // Styles
-  const btnStyle = { padding: '10px 20px', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer' };
-  const bubble = (role) => ({
-    padding: '10px', margin: '5px', borderRadius: '10px', 
-    backgroundColor: role === 'user' ? '#e1ffc7' : '#f1f0f0',
-    alignSelf: role === 'user' ? 'flex-end' : 'flex-start',
-    maxWidth: '70%'
-  });
+      // Update chat with the answer AND the citations
+      setChatHistory([...chatHistory, { 
+        question: query, 
+        answer: data.answer, 
+        citations: data.citations 
+      }]);
+      setQuery('');
+    } catch (err) {
+      alert("Chat failed.");
+    }
+    setLoading(false);
+  };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial', display: 'flex', flexDirection: 'column', height: '90vh' }}>
-      <h2>📄 AI SOP Assistant</h2>
-      <div>
-        <input type="file" onChange={(e) => setFile(e.target.files[0])} />
-        <button onClick={handleUpload} style={btnStyle}>Upload</button>
-        <span style={{ marginLeft: '10px' }}>Status: <b>{status}</b></span>
-      </div>
+    <div className="App">
+      <header className="App-header">
+        <h1>DocuMind Enterprise AI</h1>
+        <div className="upload-section">
+          <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+          <button onClick={handleUpload} disabled={loading}>Upload SOP</button>
+        </div>
 
-      <div style={{ flex: 1, border: '1px solid #ccc', margin: '20px 0', padding: '10px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-        {chat.map((msg, i) => <div key={i} style={bubble(msg.role)}><b>{msg.role}:</b> {msg.text}</div>)}
-      </div>
+        <div className="chat-window">
+          {chatHistory.map((chat, i) => (
+            <div key={i} className="message-pair">
+              <p className="user-msg"><strong>You:</strong> {chat.question}</p>
+              <div className="ai-msg">
+                <p><strong>DocuMind:</strong> {chat.answer}</p>
+                {chat.citations && chat.citations.length > 0 && (
+                  <div className="citations">
+                    <small>Verified Sources:</small>
+                    <ul>
+                      {chat.citations.map((c, j) => <li key={j}>{c}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
 
-      <div style={{ display: 'flex', gap: '10px' }}>
-        <input style={{ flex: 1, padding: '10px' }} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask about the document..." />
-        <button onClick={handleAsk} style={btnStyle}>Send</button>
-        <button onClick={() => setChat([])} style={{...btnStyle, backgroundColor: '#dc3545'}}>Clear</button>
-      </div>
+        <div className="input-area">
+          <input 
+            value={query} 
+            onChange={(e) => setQuery(e.target.value)} 
+            placeholder="Ask a policy question..." 
+          />
+          <button onClick={handleChat} disabled={loading}>Ask</button>
+        </div>
+      </header>
     </div>
   );
 }
+
 export default App;
