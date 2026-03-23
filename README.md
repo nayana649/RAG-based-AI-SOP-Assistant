@@ -9,7 +9,7 @@ The project follows a modular RAG flow:
 3. **AI Engine**: PDF text extraction and FAISS Vector Storage.
 4. **LLM**: Groq (Llama 3) for context-aware response generation.
 
-## 🛠️ Technical Implementation (Solo Developer)
+## 🛠️ Technical Implementation
 
 I built this entire RAG (Retrieval-Augmented Generation) pipeline from scratch, handling the full development lifecycle:
 
