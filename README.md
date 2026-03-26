@@ -20,3 +20,17 @@ Developed as part of my **Python Developer Internship** at **Infotact Solutions*
 3. **Configure Environment:** Add your `GROQ_API_KEY` to the `.env` file.
 4. **Run Backend:** `python main.py`
 5. **Run Frontend:** `cd sop-frontend && npm start`
+
+   ## 🚀 How to Run DocuMind Enterprise
+
+To get the application running locally for your **Infotact Solutions** review, follow these steps:
+
+### **Terminal 1: Backend (FastAPI)**
+1. Open a terminal in the root folder (`my_rag_project`).
+2. Activate the environment: `.\sop_env\Scripts\activate`
+3. Start the server: `python main.py`
+
+### **Terminal 2: Frontend (React)**
+1. Open a **second** terminal window.
+2. Navigate to the frontend: `cd sop-frontend`
+3. Launch the UI: `npm start`
