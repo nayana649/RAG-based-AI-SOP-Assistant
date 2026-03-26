@@ -1,25 +1,22 @@
-# AI-SOP-Assistant (RAG Architecture)
+# DocuMind Enterprise: RAG-based SOP Analysis 🧠
 
-A full-stack AI application designed to help teams query Standard Operating Procedures (SOPs) using Retrieval-Augmented Generation.
-
-## 🏗️ System Architecture
-The project follows a modular RAG flow:
-1. **Frontend**: React-based UI for document upload and chat interface.
-2. **Backend**: FastAPI server handling API requests.
-3. **AI Engine**: PDF text extraction and FAISS Vector Storage.
-4. **LLM**: Groq (Llama 3) for context-aware response generation.
-
-## 🛠️ Technical Implementation
-
-I built this entire RAG (Retrieval-Augmented Generation) pipeline from scratch, handling the full development lifecycle:
-
-* **Frontend**: Developed a responsive chat and upload interface using **React.js**.
-* **Backend**: Built a high-performance API with **Python** and **FastAPI**.
-* **AI Engine**: Implemented document intelligence using **PyPDF2** for extraction.
-* **LLM Integration**: Connected the system to **Groq (Llama 3)** for ultra-fast, context-aware responses.
-* **DevOps**: Managed version control via **Git/GitHub** and optimized the environment with custom `.gitignore` configurations.
+Developed as part of my **Python Developer Internship** at **Infotact Solutions**, this project implements an advanced Retrieval-Augmented Generation (RAG) system for analyzing Standard Operating Procedures (SOPs).
 
 ## 🚀 Key Features
-- **Context-Aware Q&A**: Answers are strictly based on the uploaded SOP content.
-- **Fast Inference**: Leveraged Groq's API for near-instant response times.
-- **Dynamic Indexing**: Documents are processed and indexed in real-time upon upload.
+- **Intelligent Retrieval:** Uses LangChain and Llama-3.1-8b-instant to provide accurate answers.
+- **Automated Citations:** Extracts and verifies page numbers from source PDFs.
+- **Privacy & Cost-Efficient:** Leverages local HuggingFace embeddings (`all-MiniLM-L6-v2`) to eliminate API costs.
+- **DevOps Ready:** Fully containerized with a `Dockerfile` and secured via `.env` management.
+
+## 🛠️ Technical Stack
+- **Backend:** FastAPI, Python 3.10
+- **AI Framework:** LangChain-Classic 2026
+- **Vector Store:** FAISS
+- **Frontend:** React.js
+
+## 📦 Setup Instructions
+1. **Clone the repository.**
+2. **Install dependencies:** `pip install -r requirements.txt`
+3. **Configure Environment:** Add your `GROQ_API_KEY` to the `.env` file.
+4. **Run Backend:** `python main.py`
+5. **Run Frontend:** `cd sop-frontend && npm start`
