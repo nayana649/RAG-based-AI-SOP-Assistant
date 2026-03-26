@@ -1,86 +1,64 @@
 import os
+import warnings
+import logging
+
+# 1. Block the 'embeddings.position_ids' warning specifically
+warnings.filterwarnings("ignore", message=".*embeddings.position_ids.*")
+
+# 2. Force the transformers library (HuggingFace) to be quiet
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+logging.getLogger("transformers.modeling_utils").setLevel(logging.ERROR)
+
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAIEmbeddings
 from langchain_groq import ChatGroq
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
 
-# 1. Configuration & API Key
-os.environ["GROQ_API_KEY"] = "YOUR_GROQ_API_KEY"
-os.environ["OPENAI_API_KEY"] = "YOUR_OPENAI_API_KEY"
+# Initialize Embeddings
+embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-def process_pdf_with_citations(file_path):
-    # WEEK 1: Ingestion Pipeline (Enhanced with Metadata)
+def process_pdf(file_path):
     loader = PyPDFLoader(file_path)
-    documents = loader.load() # This automatically captures 'page' metadata
+    docs = loader.load()
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    splits = splitter.split_documents(docs)
     
-    # Sophisticated Chunking (Week 1 Requirement)
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000, 
-        chunk_overlap=100
-    )
-    texts = text_splitter.split_documents(documents)
-    
-    # Embedding & Vector Store (FAISS)
-    embeddings = OpenAIEmbeddings()
-    vector_store = FAISS.from_documents(texts, embeddings)
-    
-    return vector_store
+    # Save the index for multi-question support
+    vector_db = FAISS.from_documents(splits, embeddings)
+    vector_db.save_local("faiss_index")
+    print("SUCCESS: FAISS Index created and saved.")
+    return True
 
-def get_response(query, vector_store):
-    # WEEK 2 & 4: Safety Guardrails (Strict System Prompt)
-    template = """
-    You are the 'DocuMind Enterprise' Corporate Assistant. 
-    Use ONLY the following pieces of context to answer the question. 
-    
-    GUARDRAILS:
-    1. If the answer is not in the context, strictly say: "I don't know; this is outside my scope."
-    2. Do NOT use any external knowledge. 
-    3. Do NOT mention the context folders or technical details.
+def get_answer(query):
+    if not os.path.exists("faiss_index"):
+        return {"answer": "Error: Please index the document first.", "sources": []}
 
-    CONTEXT:
+    vector_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+    retriever = vector_db.as_retriever()
+    
+    # Updated Llama 3.1 model
+    llm = ChatGroq(model_name="llama-3.1-8b-instant", temperature=0)
+    
+    template = """Answer the question professionally based only on the context:
     {context}
-
-    QUESTION: 
-    {question}
-
-    ANSWER:
+    
+    Question: {question}
     """
+    prompt = ChatPromptTemplate.from_template(template)
     
-    PROMPT = PromptTemplate(
-        template=template, 
-        input_variables=["context", "question"]
+    chain = (
+        {"context": retriever, "question": RunnablePassthrough()}
+        | prompt
+        | llm
+        | StrOutputParser()
     )
-
-    # Initialize LLM (Groq Llama 3)
-    llm = ChatGroq(model_name="llama3-8b-8192", temperature=0)
-
-    # WEEK 4: Retrieval with Metadata (Citations)
-    # Search for top 3 relevant chunks
-    docs = vector_store.similarity_search(query, k=3)
     
-    # Extract Page Numbers and Source Names for Citations
-    citations = []
-    for d in docs:
-        page_num = d.metadata.get('page', 0) + 1  # Index starts at 0, so add 1
-        source = f"Source: {os.path.basename(file_path)} (Page {page_num})"
-        if source not in citations:
-            citations.append(source)
-
-    # Create the Chain
-    chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=vector_store.as_retriever(),
-        chain_type_kwargs={"prompt": PROMPT}
-    )
-
-    result = chain.invoke({"query": query})
+    answer = chain.invoke(query)
+    docs = retriever.invoke(query)
+    sources = list(set([str(doc.metadata.get("page", "N/A")) for doc in docs]))
     
-    # Return both the Answer and the Citations
-    return {
-        "answer": result["result"],
-        "citations": citations
-    }
+    return {"answer": answer, "sources": sources}
