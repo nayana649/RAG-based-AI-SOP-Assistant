@@ -1,89 +1,104 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import './App.css';
 
 function App() {
-  const [query, setQuery] = useState('');
-  const [chatHistory, setChatHistory] = useState([]);
   const [file, setFile] = useState(null);
+  const [query, setQuery] = useState("");
+  const [chatHistory, setChatHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [showControls, setShowControls] = useState(false);
+  const [isExit, setIsExit] = useState(false);
 
-  const handleUpload = async () => {
-    if (!file) return alert("Please select a PDF first!");
+  const handleIndex = async () => {
+    if (!file) return alert("Select a file first!");
     const formData = new FormData();
-    formData.append('file', file);
-
-    setLoading(true);
+    formData.append("file", file);
     try {
-      await fetch('http://localhost:8000/upload', { method: 'POST', body: formData });
-      alert("SOP Document Uploaded and Indexed!");
-    } catch (err) {
-      alert("Upload failed.");
-    }
+      await axios.post("http://localhost:8000/upload", formData);
+      alert("Document indexed! You can now ask multiple questions.");
+      setStatusMessage("");
+      setIsExit(false);
+    } catch (err) { alert("Indexing failed."); }
+  };
+
+  const handleAsk = async () => {
+    if (!query) return;
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("query", query);
+    try {
+      const response = await axios.post("http://localhost:8000/chat", formData);
+      const newEntry = {
+        question: query,
+        answer: response.data.answer,
+        sources: response.data.sources
+      };
+      setChatHistory([newEntry, ...chatHistory]);
+      setQuery("");
+      // Logic for post-answer interaction
+      setStatusMessage("THANK YOU USER!!!!");
+      setShowControls(true);
+    } catch (err) { alert("Error getting answer."); }
     setLoading(false);
   };
 
-  const handleChat = async () => {
-    if (!query) return;
-    setLoading(true);
-    
-    try {
-      const response = await fetch('http://localhost:8000/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query })
-      });
-      const data = await response.json();
+  const handleContinue = () => {
+    setStatusMessage("PROCEED");
+    setShowControls(false);
+  };
 
-      // Update chat with the answer AND the citations
-      setChatHistory([...chatHistory, { 
-        question: query, 
-        answer: data.answer, 
-        citations: data.citations 
-      }]);
-      setQuery('');
-    } catch (err) {
-      alert("Chat failed.");
-    }
-    setLoading(false);
+  const handleExit = () => {
+    setStatusMessage("VISIT AGAIN, HAVE A NICE DAY!!!");
+    setShowControls(false);
+    setIsExit(true); // Disable further input
   };
 
   return (
     <div className="App">
-      <header className="App-header">
-        <h1>DocuMind Enterprise AI</h1>
-        <div className="upload-section">
+      <h1>DocuMind Enterprise</h1>
+      
+      {!isExit && (
+        <div className="upload-box">
           <input type="file" onChange={(e) => setFile(e.target.files[0])} />
-          <button onClick={handleUpload} disabled={loading}>Upload SOP</button>
+          <button onClick={handleIndex}>Index Document</button>
         </div>
+      )}
 
-        <div className="chat-window">
-          {chatHistory.map((chat, i) => (
-            <div key={i} className="message-pair">
-              <p className="user-msg"><strong>You:</strong> {chat.question}</p>
-              <div className="ai-msg">
-                <p><strong>DocuMind:</strong> {chat.answer}</p>
-                {chat.citations && chat.citations.length > 0 && (
-                  <div className="citations">
-                    <small>Verified Sources:</small>
-                    <ul>
-                      {chat.citations.map((c, j) => <li key={j}>{c}</li>)}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+      <h2 className="status-banner">{statusMessage}</h2>
 
+      {!showControls && !isExit && (
         <div className="input-area">
           <input 
             value={query} 
             onChange={(e) => setQuery(e.target.value)} 
-            placeholder="Ask a policy question..." 
+            placeholder="Ask anything about the document..."
           />
-          <button onClick={handleChat} disabled={loading}>Ask</button>
+          <button onClick={handleAsk} disabled={loading}>
+            {loading ? "Thinking..." : "Ask"}
+          </button>
         </div>
-      </header>
+      )}
+
+      {showControls && (
+        <div className="control-prompt">
+          <p>Do you want to continue or exit?</p>
+          <button className="btn-continue" onClick={handleContinue}>Continue</button>
+          <button className="btn-exit" onClick={handleExit}>Exit</button>
+        </div>
+      )}
+
+      <div className="chat-container">
+        {chatHistory.map((item, index) => (
+          <div key={index} className="chat-entry">
+            <p><strong>You:</strong> {item.question}</p>
+            <p><strong>DocuMind:</strong> {item.answer}</p>
+            <small>Sources (Page): {item.sources.join(", ")}</small>
+            <hr />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
