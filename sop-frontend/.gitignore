@@ -1,23 +1,35 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# production
-/build
-
-# misc
-.DS_Store
+# 1. Environment Variables (CRITICAL for Security)
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
+# 2. Python - Virtual Environments & Cache
+venv/
+sop_env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.python-version
+
+# 3. React Frontend - Dependencies & Build
+node_modules/
+/sop-frontend/node_modules/
+/sop-frontend/build/
+.pnp
+.pnp.js
+
+# 4. Logs and System Files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.DS_Store
+Thumbs.db
+
+# 5. Project Specific Data
+/uploads/
+*.pdf
