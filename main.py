@@ -1,75 +1,38 @@
 import os
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import uvicorn
+from processor import process_pdf, get_answer 
+from dotenv import load_dotenv
 
-# Import the processing function from your processor.py
-from processor import process_pdf_with_citations, get_response
+load_dotenv()
+app = FastAPI()
 
-app = FastAPI(title="DocuMind Enterprise API")
-
-# --- 1. Week 4: Security & Integration (CORS) ---
-# This allows your React frontend (usually on port 3000) to call this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with your specific domain
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Global variable to store the vector database in memory
-# (In a larger app, you would use Pinecone as per your guide)
-global_vector_store = None
-current_file_path = None
-
-class ChatRequest(BaseModel):
-    query: str
-
-@app.get("/")
-def read_root():
-    return {"status": "DocuMind Enterprise API is running"}
-
-# --- 2. Week 1: Ingestion Endpoint ---
 @app.post("/upload")
-async def upload_pdf(file: UploadFile = File(...)):
-    global global_vector_store, current_file_path
-    
-    # Save the uploaded file locally
-    os.makedirs("data", exist_ok=True)
-    file_path = f"data/{file.filename}"
+async def upload_document(file: UploadFile = File(...)):
+    os.makedirs("uploads", exist_ok=True)
+    file_path = os.path.join("uploads", file.filename)
     with open(file_path, "wb") as buffer:
         buffer.write(await file.read())
-    
-    try:
-        # Process PDF and create FAISS index
-        global_vector_store = process_pdf_with_citations(file_path)
-        current_file_path = file_path
-        return {"message": f"File {file.filename} processed successfully and indexed."}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    process_pdf(file_path)
+    return {"message": "Document indexed successfully"}
 
-# --- 3. Week 2 & 3: Retrieval & Streaming Logic ---
 @app.post("/chat")
-async def chat_endpoint(request: ChatRequest):
-    global global_vector_store
-    
-    if global_vector_store is None:
-        raise HTTPException(status_code=400, detail="No PDF uploaded yet. Please upload a document first.")
-    
+async def chat_endpoint(query: str = Form(...)):
     try:
-        # WEEK 4: Get response and the new Citations metadata
-        # Note: We pass the file_path to processor for source naming
-        result = get_response(request.query, global_vector_store, current_file_path)
-        
-        # Returns both the text answer and the specific page citations
-        return {
-            "answer": result["answer"],
-            "citations": result["citations"]
-        }
+        # Now calls get_answer with just the question
+        result = get_answer(query)
+        return result
     except Exception as e:
+        print(f"Backend Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
