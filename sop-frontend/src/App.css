@@ -1,38 +1,139 @@
+/* App.css - Professional Enterprise Theme */
+:root {
+  --primary-navy: #1a2a6c;
+  --accent-blue: #0052cc;
+  --bg-slate: #f4f7f9;
+  --text-dark: #2d3e50;
+  --white: #ffffff;
+  --success-green: #28a745;
+  --danger-red: #dc3545;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-slate);
+  color: var(--text-dark);
+}
+
 .App {
+  max-width: 850px;
+  margin: 40px auto;
+  padding: 30px;
+  background: var(--white);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border-radius: 15px;
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+h1 {
+  color: var(--primary-navy);
+  font-weight: 800;
+  margin-bottom: 10px;
+  border-bottom: 3px solid var(--accent-blue);
+  display: inline-block;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+/* Status Banner for THANK YOU / PROCEED / VISIT AGAIN */
+.status-banner {
+  color: var(--primary-navy);
+  font-weight: 800;
+  text-align: center;
+  margin: 25px 0;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* Upload and Input Sections */
+.upload-box, .input-area {
+  margin: 25px 0;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  gap: 12px;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
+}
+
+input[type="text"] {
+  width: 70%;
+  padding: 12px;
+  border: 2px solid #ced4da;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+input[type="text"]:focus {
+  border-color: var(--accent-blue);
+  outline: none;
+}
+
+/* Buttons Styling */
+button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.3s ease;
   color: white;
+  background-color: var(--accent-blue);
 }
 
-.App-link {
-  color: #61dafb;
+button:hover {
+  filter: brightness(90%);
+  transform: translateY(-1px);
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Continue/Exit Control Box */
+.control-prompt {
+  background: #f8f9fa;
+  padding: 25px;
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+  margin: 20px 0;
+}
+
+.control-prompt p {
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 15px;
+}
+
+.btn-continue {
+  background-color: var(--success-green) !important;
+  margin-right: 15px;
+}
+
+.btn-exit {
+  background-color: var(--danger-red) !important;
+}
+
+/* Chat History Styling */
+.chat-container {
+  text-align: left;
+  margin-top: 30px;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+}
+
+.chat-entry {
+  background: #ffffff;
+  padding: 20px;
+  margin-bottom: 15px;
+  border-left: 6px solid var(--accent-blue);
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.chat-entry hr {
+  border: 0;
+  border-top: 1px solid #f1f1f1;
+  margin: 15px 0;
+}
+
+strong {
+  color: var(--primary-navy);
+}
+
+small {
+  color: #6c757d;
+  font-weight: 500;
 }
