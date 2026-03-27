@@ -40,14 +40,25 @@ def get_answer(query):
     vector_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
     retriever = vector_db.as_retriever()
     
-    # Updated Llama 3.1 model
+    # Updated Llama 3.1 model - temperature 0 ensures it follows instructions strictly
     llm = ChatGroq(model_name="llama-3.1-8b-instant", temperature=0)
     
-    template = """Answer the question professionally based only on the context:
+    # MODIFIED TEMPLATE: Strict Instruction for Irrelevant Questions
+    template = """You are a professional corporate assistant.
+    Use ONLY the provided context to answer the question.
+    
+    RULE: If the information is not contained in the context below, 
+    strictly respond with: "I Don't know".
+    
+    Do not use any outside knowledge or provide general information.
+
+    Context:
     {context}
     
     Question: {question}
-    """
+    
+    Answer:"""
+    
     prompt = ChatPromptTemplate.from_template(template)
     
     chain = (
@@ -58,6 +69,11 @@ def get_answer(query):
     )
     
     answer = chain.invoke(query)
+    
+    # If the answer is the refusal phrase, return no sources
+    if "I Don't know" in answer:
+        return {"answer": "I Don't know", "sources": []}
+    
     docs = retriever.invoke(query)
     sources = list(set([str(doc.metadata.get("page", "N/A")) for doc in docs]))
     
